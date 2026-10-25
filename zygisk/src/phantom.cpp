@@ -40,6 +40,16 @@
 #include <dobby.h>
 #include <lsplant.hpp>
 
+// Dobby (pinned @ 6f065cf) returns plain int from DobbyHook/DobbyDestroy:
+// 0 = success, -1 = failure. The RS_SUCCESS/RT_SUCCESS enums only exist in
+// newer (refactor-era) Dobby, so alias them here for readability.
+#ifndef RS_SUCCESS
+#define RS_SUCCESS 0
+#endif
+#ifndef RT_SUCCESS
+#define RT_SUCCESS 0
+#endif
+
 #include "elf_util.h"
 #include "zygisk.hpp"
 
