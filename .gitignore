@@ -1,0 +1,19 @@
+# Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Generated (CI regenerates the real one; the placeholder is checked in)
+build*/
+dist/
+*.zip
+
+# OS
+.DS_Store

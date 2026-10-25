@@ -1,0 +1,101 @@
+name: Build Phantom Bypass
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk;26.3.11579264"
+
+      - name: Compile hooker DEX (Java -> classes.dex -> dex_bytes.h)
+        run: |
+          mkdir -p build/hooker-classes build/dex
+          javac -source 8 -target 8 -nowarn \
+            -bootclasspath "$ANDROID_HOME/platforms/android-34/android.jar" \
+            $(find hooker/src -name '*.java') \
+            -d build/hooker-classes
+          "$ANDROID_HOME/build-tools/34.0.0/d8" --release --min-api 24 \
+            --lib "$ANDROID_HOME/platforms/android-34/android.jar" \
+            --output build/dex \
+            $(find build/hooker-classes -name '*.class')
+          xxd -i build/dex/classes.dex > zygisk/src/dex_bytes.h
+          echo "dex_bytes.h size: $(stat -c%s zygisk/src/dex_bytes.h)"
+
+      - name: Build Zygisk module (arm64-v8a / armeabi-v7a / x86_64 / x86)
+        run: |
+          NDK="$ANDROID_HOME/ndk/26.3.11579264"
+          for ABI in arm64-v8a armeabi-v7a x86_64 x86; do
+            echo "=== building $ABI ==="
+            cmake -S zygisk -B "build/$ABI" \
+              -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+              -DANDROID_ABI="$ABI" \
+              -DANDROID_PLATFORM=android-24 \
+              -DCMAKE_BUILD_TYPE=Release
+            cmake --build "build/$ABI" -j 4
+            ls -la "build/$ABI/libphantom.so"
+          done
+
+      - name: Build Phantom Manager APK
+        run: |
+          gradle wrapper --gradle-version 8.7 || true
+          if [ -f ./gradlew ]; then
+            ./gradlew --no-daemon :app:assembleDebug
+          else
+            gradle --no-daemon :app:assembleDebug
+          fi
+
+      - name: Package Magisk module zip
+        run: |
+          mkdir -p dist/zygisk
+          cp module/module.prop module/customize.sh module/service.sh \
+             module/post-fs-data.sh module/uninstall.sh module/action.sh \
+             module/system.prop dist/
+          for ABI in arm64-v8a armeabi-v7a x86_64 x86; do
+            cp "build/$ABI/libphantom.so" "dist/zygisk/$ABI.so"
+          done
+          cp zygisk/src/dex_bytes.h dist/dex_bytes.h.bak 2>/dev/null || true
+          rm -f dist/dex_bytes.h.bak
+          cd dist && zip -r ../Phantom-Bypass-Magisk-Module.zip . && cd ..
+          unzip -l Phantom-Bypass-Magisk-Module.zip
+
+      - name: Collect artifacts
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Phantom-Manager.apk
+          ls -la Phantom-Bypass-Magisk-Module.zip Phantom-Manager.apk
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phantom-bypass
+          path: |
+            Phantom-Bypass-Magisk-Module.zip
+            Phantom-Manager.apk
+          if-no-files-found: error
+
+      - name: Create release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Phantom-Bypass-Magisk-Module.zip
+            Phantom-Manager.apk

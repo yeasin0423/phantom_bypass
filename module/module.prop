@@ -1,0 +1,7 @@
+id=phantom_bypass
+name=Phantom Bypass
+version=v1.0.0
+versionCode=100
+author=phantom
+description=Per-app root & emulator detection bypass + universal SSL unpinning (Zygisk + LSPlant). Install the Phantom Manager APK to pick target apps and edit per-app profiles (device identity, IMEI/telephony/carrier, custom props, hide lists, launch scripts). Requires Magisk 26.1+ with Zygisk enabled.
+minMagisk=26100

@@ -1,0 +1,11 @@
+# Phantom Bypass — OPTIONAL global system.prop
+#
+# Everything here applies to the WHOLE system (all apps, including system
+# processes). For per-app props leave this file untouched and use the
+# per-app "Custom system properties" editor in Phantom Manager instead.
+#
+# Uncomment to enable:
+#
+# ro.build.version.security_patch=2024-12-01
+# ro.boot.vbmeta.device_state=locked
+# ro.boot.verifiedbootstate=green
