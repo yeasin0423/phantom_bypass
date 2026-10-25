@@ -44,7 +44,12 @@ jobs:
             --lib "$ANDROID_HOME/platforms/android-34/android.jar" \
             --output build/dex \
             $(find build/hooker-classes -name '*.class')
-          xxd -i build/dex/classes.dex > zygisk/src/dex_bytes.h
+          # xxd -i derives the C identifiers from the PATH. Running from
+          # build/dex with the bare filename yields `classes_dex` and
+          # `classes_dex_len` — exactly the names phantom.cpp expects.
+          # (Redirect happens in the repo root shell, so the output path
+          # is relative to the repo root, not build/dex.)
+          (cd build/dex && xxd -i classes.dex) > zygisk/src/dex_bytes.h
           echo "dex_bytes.h size: $(stat -c%s zygisk/src/dex_bytes.h)"
 
       - name: Build Zygisk module (arm64-v8a / armeabi-v7a / x86_64 / x86)
