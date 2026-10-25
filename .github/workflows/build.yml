@@ -19,16 +19,24 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # NOTE: android-actions/setup-android@v3 is intentionally NOT used.
+      # It runs `sdkmanager tools`, a package Google removed from the SDK
+      # manifest, which fails the whole job. The GitHub ubuntu-latest runner
+      # already ships the Android SDK (ANDROID_HOME + cmdline-tools).
 
       - name: Install SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk;26.3.11579264"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKM" ]; then
+            SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | sort -V | tail -1)"
+          fi
+          echo "Using sdkmanager: $SDKM"
+          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+          "$SDKM" --install "platforms;android-34" "build-tools;34.0.0" "platform-tools" "ndk;26.3.11579264"
 
       - name: Compile hooker DEX (Java -> classes.dex -> dex_bytes.h)
         run: |
+          command -v xxd >/dev/null 2>&1 || sudo apt-get install -y -qq xxd
           mkdir -p build/hooker-classes build/dex
           javac -source 8 -target 8 -nowarn \
             -bootclasspath "$ANDROID_HOME/platforms/android-34/android.jar" \
