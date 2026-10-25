@@ -8,16 +8,20 @@ include(FetchContent)
 
 # ---------------------------------------------------------------------------
 # Dobby — inline hook engine (Apache-2.0)
-# ---------------------------------------------------------------------------
-set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
+# PINNED to 6f065cf (2023-03-06, last commit before the 2023/2024 refactor
+# storm). The current master / `latest` tag is BROKEN for Android NDK:
+#   - common/os_arch_features.h references OSMemory without a declaration
+#   - closure_bridge_arm64.asm uses Mach-O-only `@PAGE` relocation syntax
+# Both files do not exist at this pin; the bridge is built by TurboAssembler.
+# NOTE: build ONLY the `dobby_static` target (see workflow yml) — this commit
+# adds macOS-only macho_ctx_kit targets unconditionally which cannot compile
+# off Darwin.
 set(DOBBY_DEBUG OFF CACHE BOOL "" FORCE)
-set(DOBBY_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
-set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(dobby
     GIT_REPOSITORY https://github.com/jmpews/Dobby.git
-    GIT_TAG        latest
-    GIT_SHALLOW    TRUE
+    GIT_TAG        6f065cfcce47e5aa43901910eb702884f3cf4777
+    GIT_SHALLOW    FALSE
 )
 FetchContent_GetProperties(dobby)
 if(NOT dobby_POPULATED)
@@ -57,6 +61,6 @@ find_library(log-lib log)
 
 target_link_libraries(phantom PRIVATE
     lsplant_static
-    dobby
+    dobby_static
     ${log-lib}
 )
