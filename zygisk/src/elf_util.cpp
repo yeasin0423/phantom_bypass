@@ -27,6 +27,13 @@
 #include "logging.h"
 #include "elf_util.h"
 
+// Neither the kernel-uapi <linux/elf.h> (used on Android) nor glibc's
+// <elf.h> define the generic ELF_ST_TYPE macro — only the ELF32_/ELF64_
+// variants. st_info layout: bits 0-3 = symbol type, bits 4-7 = bind.
+#ifndef ELF_ST_TYPE
+#define ELF_ST_TYPE(x) ((x) & 0xf)
+#endif
+
 using namespace SandHook;
 
 template<typename T>
