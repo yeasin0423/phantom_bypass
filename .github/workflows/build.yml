@@ -1,6 +1,8 @@
 name: Build Phantom Bypass
 
 on:
+  push:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -69,14 +71,19 @@ jobs:
             ls -la "build/$ABI/libphantom.so"
           done
 
+      # The preinstalled Gradle on ubuntu-latest is 9.x, which is NOT
+      # compatible with AGP 8.1.4 (Gradle 9 removed DependencyHandler.module()
+      # that AGP still calls during configuration). Install Gradle 8.7
+      # explicitly via the official Gradle action and build with that.
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
       - name: Build Phantom Manager APK
         run: |
-          gradle wrapper --gradle-version 8.7 || true
-          if [ -f ./gradlew ]; then
-            ./gradlew --no-daemon :app:assembleDebug
-          else
-            gradle --no-daemon :app:assembleDebug
-          fi
+          gradle --version | head -6
+          gradle --no-daemon :app:assembleDebug
 
       - name: Package Magisk module zip
         run: |
