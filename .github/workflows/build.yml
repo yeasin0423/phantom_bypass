@@ -57,7 +57,10 @@ jobs:
               -DANDROID_ABI="$ABI" \
               -DANDROID_PLATFORM=android-24 \
               -DCMAKE_BUILD_TYPE=Release
-            cmake --build "build/$ABI" -j 4
+            # --target phantom: builds libphantom.so + its dependency graph
+            # (dobby_static, lsplant_static) and SKIPS Dobby's macOS-only
+            # macho_ctx_kit targets, which cannot compile off Darwin.
+            cmake --build "build/$ABI" --target phantom -j 4
             ls -la "build/$ABI/libphantom.so"
           done
 
